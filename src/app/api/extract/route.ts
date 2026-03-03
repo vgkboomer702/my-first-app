@@ -23,22 +23,11 @@ export async function POST(req: NextRequest) {
     switch (ext) {
       case "pdf": {
         fileType = "PDF";
-        const PDFParser = (await import("pdf2json")).default;
-        const pdfText = await new Promise<{ text: string; pages: number }>((resolve, reject) => {
-          const parser = new PDFParser(null, true);
-          parser.on("pdfParser_dataReady", () => {
-            const raw = parser.getRawTextContent();
-            const pages = (parser.data as { Pages?: unknown[] } | null)?.Pages?.length ?? 0;
-            resolve({ text: raw, pages });
-          });
-          parser.on("pdfParser_dataError", (err: Error | { parserError: Error }) => {
-            const msg = err instanceof Error ? err.message : String(err.parserError);
-            reject(new Error(msg));
-          });
-          parser.parseBuffer(buffer);
-        });
-        text = pdfText.text;
-        pageCount = pdfText.pages;
+        const { extractText: extractPdfText, getMeta } = await import("unpdf");
+        const pdfData = new Uint8Array(buffer);
+        const { text: pdfPages, totalPages } = await extractPdfText(pdfData);
+        text = pdfPages.join("\n");
+        pageCount = totalPages;
         break;
       }
 

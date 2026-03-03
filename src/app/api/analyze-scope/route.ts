@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-const SYSTEM_PROMPT = `You are an expert bid analyst. Extract structured scope information from this RFP/bid document. Return ONLY valid JSON with no markdown formatting, using this exact structure: { "requirements": [{ "id": string, "category": string, "description": string, "priority": "must-have" | "should-have" | "nice-to-have" }], "evaluationCriteria": [{ "criterion": string, "weight": string, "notes": string }], "constraints": [{ "type": string, "description": string }], "clientPriorities": [{ "priority": string, "evidence": string }], "capabilityAreas": [{ "area": string, "description": string, "relevanceToScope": string }], "scopeSummary": string }`;
+const MAX_TEXT_LENGTH = 50_000;
+
+const SYSTEM_PROMPT = `You are an expert bid analyst. Extract structured scope information from this RFP/bid document. Return ONLY valid JSON with no markdown formatting, no code fences, using this exact structure: { "requirements": [{ "id": string, "category": string, "description": string, "priority": "must-have" | "should-have" | "nice-to-have" }], "evaluationCriteria": [{ "criterion": string, "weight": string, "notes": string }], "constraints": [{ "type": string, "description": string }], "clientPriorities": [{ "priority": string, "evidence": string }], "capabilityAreas": [{ "area": string, "description": string, "relevanceToScope": string }], "scopeSummary": string }`;
+
+function extractJson(raw: string): object {
+  // Strip markdown code fences
+  let cleaned = raw.trim();
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  cleaned = cleaned.trim();
+
+  // Find the first { and last } to extract the JSON object
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    cleaned = cleaned.slice(start, end + 1);
+  }
+
+  return JSON.parse(cleaned);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,16 +40,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const truncated = text.length > MAX_TEXT_LENGTH;
+    const docText = truncated ? text.slice(0, MAX_TEXT_LENGTH) : text;
+    const truncationNote = truncated
+      ? `\n\nNote: This document was truncated to the first ${MAX_TEXT_LENGTH.toLocaleString()} characters for initial analysis.`
+      : "";
+
     const client = new Anthropic({ apiKey });
 
     const stream = client.messages.stream({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 8192,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [
         {
           role: "user",
-          content: `Analyze this document and extract the structured scope data:\n\n${text}`,
+          content: `Analyze this document and extract the structured scope data:${truncationNote}\n\n${docText}`,
         },
       ],
     });
@@ -46,12 +70,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const rawText = textBlock.text;
+    console.log("Claude raw response (first 500 chars):", rawText.slice(0, 500));
+
     let parsed;
     try {
-      parsed = JSON.parse(textBlock.text);
+      parsed = extractJson(rawText);
     } catch {
+      console.error("JSON parse failed. Full response:", rawText);
       return NextResponse.json(
-        { error: "Failed to parse AI response as JSON. Please try again." },
+        { error: `Failed to parse AI response as JSON. Raw response: ${rawText.slice(0, 300)}...` },
         { status: 502 }
       );
     }
