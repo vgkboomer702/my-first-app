@@ -38,6 +38,24 @@ export interface CapabilityArea {
   relevanceToScope: string;
 }
 
+export type CapabilityStatus = "strong-current" | "strong-stale" | "weak" | "gap";
+
+export interface CapabilityAssessment {
+  areaId: string;
+  area: string;
+  status: CapabilityStatus | null;
+  description: string;
+  partnerships: string;
+}
+
+export interface StrategyInput {
+  winThemes: string;
+  differentiators: string;
+  positioning: string;
+  competitors: string;
+  additionalContext: string;
+}
+
 export interface ScopeAnalysis {
   requirements: ScopeRequirement[];
   evaluationCriteria: EvaluationCriterion[];
@@ -52,6 +70,10 @@ interface BriefContextValue {
   setDocument: (doc: ExtractedDocument | null) => void;
   scopeAnalysis: ScopeAnalysis | null;
   setScopeAnalysis: (scope: ScopeAnalysis | null) => void;
+  capabilities: CapabilityAssessment[];
+  setCapabilities: (caps: CapabilityAssessment[]) => void;
+  strategy: StrategyInput | null;
+  setStrategy: (s: StrategyInput | null) => void;
   clearBrief: () => void;
 }
 
@@ -60,14 +82,18 @@ const BriefContext = createContext<BriefContextValue | null>(null);
 export function BriefProvider({ children }: { children: React.ReactNode }) {
   const [document, setDocument] = useState<ExtractedDocument | null>(null);
   const [scopeAnalysis, setScopeAnalysis] = useState<ScopeAnalysis | null>(null);
+  const [capabilities, setCapabilities] = useState<CapabilityAssessment[]>([]);
+  const [strategy, setStrategy] = useState<StrategyInput | null>(null);
 
   const clearBrief = useCallback(() => {
     setDocument(null);
     setScopeAnalysis(null);
+    setCapabilities([]);
+    setStrategy(null);
   }, []);
 
   return (
-    <BriefContext.Provider value={{ document, setDocument, scopeAnalysis, setScopeAnalysis, clearBrief }}>
+    <BriefContext.Provider value={{ document, setDocument, scopeAnalysis, setScopeAnalysis, capabilities, setCapabilities, strategy, setStrategy, clearBrief }}>
       {children}
     </BriefContext.Provider>
   );

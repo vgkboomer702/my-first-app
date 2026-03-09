@@ -6,19 +6,12 @@ const MAX_TEXT_LENGTH = 50_000;
 const SYSTEM_PROMPT = `You are an expert bid analyst. Extract structured scope information from this RFP/bid document. Return ONLY valid JSON with no markdown formatting, no code fences, using this exact structure: { "requirements": [{ "id": string, "category": string, "description": string, "priority": "must-have" | "should-have" | "nice-to-have" }], "evaluationCriteria": [{ "criterion": string, "weight": string, "notes": string }], "constraints": [{ "type": string, "description": string }], "clientPriorities": [{ "priority": string, "evidence": string }], "capabilityAreas": [{ "area": string, "description": string, "relevanceToScope": string }], "scopeSummary": string }`;
 
 function extractJson(raw: string): object {
-  // Strip markdown code fences
-  let cleaned = raw.trim();
-  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-  cleaned = cleaned.trim();
-
-  // Find the first { and last } to extract the JSON object
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) {
-    cleaned = cleaned.slice(start, end + 1);
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("No JSON object found in response");
   }
-
-  return JSON.parse(cleaned);
+  return JSON.parse(raw.slice(start, end + 1));
 }
 
 export async function POST(req: NextRequest) {
