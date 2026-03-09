@@ -56,6 +56,73 @@ export interface StrategyInput {
   additionalContext: string;
 }
 
+export type ConfidenceLevel = "verified" | "inferred" | "assumption";
+export type MarketMaturity = "bleeding-edge" | "emerging" | "established";
+export type IntegrationComplexity = "low" | "medium" | "high";
+
+export interface CapabilityMapEntry {
+  area: string;
+  status: string;
+  currentApproach: string;
+  recommendation: string;
+  reasoning: string;
+  confidence: ConfidenceLevel;
+}
+
+export interface IntelligenceOption {
+  title: string;
+  description: string;
+  whyItMatters: string;
+  howItWorks: string;
+  marketMaturity: MarketMaturity;
+  realWorldExample: string;
+  vendorsAndPartners: string;
+  integrationComplexity: IntegrationComplexity;
+  risks: string;
+  dealAlignment: string;
+  confidence: ConfidenceLevel;
+  confidenceReasoning: string;
+}
+
+export interface IntelligenceCard {
+  area: string;
+  status: string;
+  conventionalApproach: string;
+  options: IntelligenceOption[];
+}
+
+export interface EfficiencyOpportunity {
+  opportunity: string;
+  description: string;
+  estimatedImpact: string;
+  confidence: ConfidenceLevel;
+}
+
+export interface PartnerEntry {
+  partner: string;
+  relevantArea: string;
+  whatTheyOffer: string;
+  whyTheyFit: string;
+  confidence: ConfidenceLevel;
+}
+
+export interface StrategicWarning {
+  warning: string;
+  impact: string;
+  suggestedAction: string;
+}
+
+export interface GeneratedReport {
+  reportTitle: string;
+  generatedDate: string;
+  scopeSummary: string;
+  capabilityMap: CapabilityMapEntry[];
+  intelligenceCards: IntelligenceCard[];
+  efficiencyOpportunities: EfficiencyOpportunity[];
+  partnerLandscape: PartnerEntry[];
+  strategicWarnings: StrategicWarning[];
+}
+
 export interface ScopeAnalysis {
   requirements: ScopeRequirement[];
   evaluationCriteria: EvaluationCriterion[];
@@ -74,6 +141,8 @@ interface BriefContextValue {
   setCapabilities: (caps: CapabilityAssessment[]) => void;
   strategy: StrategyInput | null;
   setStrategy: (s: StrategyInput | null) => void;
+  report: GeneratedReport | null;
+  setReport: (r: GeneratedReport | null) => void;
   clearBrief: () => void;
 }
 
@@ -84,16 +153,18 @@ export function BriefProvider({ children }: { children: React.ReactNode }) {
   const [scopeAnalysis, setScopeAnalysis] = useState<ScopeAnalysis | null>(null);
   const [capabilities, setCapabilities] = useState<CapabilityAssessment[]>([]);
   const [strategy, setStrategy] = useState<StrategyInput | null>(null);
+  const [report, setReport] = useState<GeneratedReport | null>(null);
 
   const clearBrief = useCallback(() => {
     setDocument(null);
     setScopeAnalysis(null);
     setCapabilities([]);
     setStrategy(null);
+    setReport(null);
   }, []);
 
   return (
-    <BriefContext.Provider value={{ document, setDocument, scopeAnalysis, setScopeAnalysis, capabilities, setCapabilities, strategy, setStrategy, clearBrief }}>
+    <BriefContext.Provider value={{ document, setDocument, scopeAnalysis, setScopeAnalysis, capabilities, setCapabilities, strategy, setStrategy, report, setReport, clearBrief }}>
       {children}
     </BriefContext.Provider>
   );
